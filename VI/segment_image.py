@@ -1,0 +1,158 @@
+import theano
+import pymc3 as pm
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+
+from utils import PDI, predict_cluster
+
+
+plt.style.use('ggplot')
+plt.rcParams["axes.grid"] = False
+
+
+# Number of cluster setting
+K = 20
+
+
+
+
+print("reading image...")
+# Read image
+img_name = "25098"
+train_path = "/Users/leah/Columbia/courses/ml_prob_programming/ENV/BSR/BSDS500/data/images/train/"
+img = plt.imread(train_path+ img_name+".jpg")
+
+X = img.reshape(-1, 3).astype(int)
+N, D = X.shape
+
+# Out-path
+
+out_path = "out/" + img_name
+
+plt.grid(None)
+plt.imshow(img)
+plt.savefig(out_path+"/"+img_name+".jpg")
+
+
+print("defining model...")
+# Define model
+X_shared = theano.shared(X)
+minibatch_size = 500
+X_minibatch = pm.Minibatch(X, minibatch_size)
+
+
+
+# set up model
+with pm.Model() as model:
+    pi = pm.Dirichlet('pi', np.ones(K))
+
+    comp_dist = []
+    mu = []
+    packed_chol = []
+    chol = []
+    for i in range(K):
+        temp_mean = np.random.randint(low=50, high=200, size=3)
+        #print(temp_mean)
+        mu.append(pm.Normal('mu%i'%i, temp_mean, 20, shape=3))
+        packed_chol.append(pm.LKJCholeskyCov('chol_cov_%i'%i,
+                                             eta=2,
+                                             n=3,
+                                             sd_dist=pm.HalfNormal.dist(10)))
+        chol.append(pm.expand_packed_triangular(3, packed_chol[i], lower=True))
+        comp_dist.append(pm.MvNormal.dist(mu=mu[i], chol=chol[i]))
+
+    xobs = pm.Mixture('x_obs', pi, comp_dist,
+            observed=X_shared)
+
+
+
+print("making inference...")
+# Inference
+with model:
+    advi_mf=pm.ADVI()
+    advi_mf.fit(10000, more_replacements={X_shared: X_minibatch},
+                obj_optimizer=pm.adagrad(learning_rate=1e-2))
+
+fig = plt.figure()
+plt.plot(advi_mf.hist)
+plt.title("loss function")
+plt.savefig(out_path+"/"+"lossPlot.jpg")
+
+
+print("making prediction...")
+# Prediction
+y, point = predict_cluster(approx=advi_mf.approx, nsample=1000, X=X, model=model, xobs=xobs, K=K)
+nrows, ncols = img.shape[0], img.shape[1]
+segmented_img = np.zeros((nrows, ncols, D),dtype='int')
+cluster_reshape = y.reshape(nrows, ncols)
+for i in range(nrows):
+    for j in range(ncols):
+        cluster_number = cluster_reshape[i, j]
+        segmented_img[i, j] = point['mu{0:d}'.format(cluster_number)].astype(int)
+
+fig = plt.figure()
+plt.imshow(segmented_img)
+plt.title("Segmented image using {0:d} clusters".format(K))
+plt.savefig(out_path+"/"+"seg_img.jpg")
+
+
+fig, axs = plt.subplots(1, 2)
+axs[0].imshow(img)
+axs[0].grid(None)
+axs[0].set_title("original image")
+axs[1].imshow(segmented_img)
+axs[1].grid(None)
+axs[1].set_title("Segmented image using {0:d} clusters".format(K))
+plt.savefig(out_path+"/"+"comparison.jpg", pdi=400)
+
+
+print("doing diagnosis...")
+# Diagnosis
+post_samples = advi_mf.approx.sample(100)
+pdi, pdi_log, wapdi = PDI(post_samples, model) # average over 100 samples
+
+
+print("ploting PDIs")
+# plot PDI
+pdi_reshape = pdi.reshape(nrows, ncols)
+pdi_log_reshape = pdi_log.reshape(nrows, ncols)
+wapdi_reshape = wapdi.reshape(nrows, ncols)
+
+
+fig = plt.figure()
+fig.subplots_adjust(hspace=0.5, wspace=0.5)
+
+plt.subplot(1, 2, 1)
+sns.set()
+ax = sns.heatmap(pdi_reshape)
+ax.set_title("pdi")
+plt.imshow(pdi_reshape)
+
+plt.subplot(1,2,2)
+sns.set()
+ax = sns.heatmap(np.log(pdi_reshape))
+ax.set_title("log(pdi)")
+plt.imshow(np.log(pdi_reshape))
+
+plt.savefig(out_path+"/"+"PDI_plot1.jpg", dpi=400)
+
+
+fig = plt.figure()
+fig.subplots_adjust(hspace=0.5, wspace=0.5)
+
+plt.subplot(1,2,1)
+sns.set()
+ax = sns.heatmap(pdi_log_reshape)
+ax.set_title("pdi_log")
+plt.imshow(pdi_log_reshape)
+
+plt.subplot(1,2,2)
+sns.set()
+ax = sns.heatmap(wapdi_reshape)
+ax.set_title("wapdi")
+plt.imshow(wapdi_reshape)
+
+plt.savefig(out_path+"/"+"PDI_plot2.jpg", dpi=400)
+
