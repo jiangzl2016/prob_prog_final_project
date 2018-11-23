@@ -6,19 +6,29 @@ import tensorflow as tf
 import numpy as np
 import edward as ed
 #import pystan
+import os
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import time
+from datetime import datetime
+import pickle
+import json
+import seaborn as sns
 from edward.models import Categorical, Dirichlet, InverseGamma, Normal, MultivariateNormalDiag, Mixture, Empirical, ParamMixture
+from Utils import load_image_matrix
 
 img_no = 2092
-train_path = "../data/BSR/BSDS500/data/images/train/{}.jpg".format(img_no)
-img = plt.imread(train_path)
-train_img = img.reshape(-1, 3).astype(int)
+TRAIN_DIR = "../data/BSR/BSDS500/data/images/train/"
+train_img = load_image_matrix(img_no, TRAIN_DIR, reshape=True)
 
 # Hyperparameters
 N = train_img.shape[0]
 K = 6
 D = train_img.shape[1]
+T = 100  # number of MCMC samples
+M = 200  # number of posterior samples sampled
+
+ed.set_seed(1234)
 
 with tf.name_scope("model"):
     pi = Dirichlet(concentration=tf.constant([1.0] * K, name="pi/weights"), name= "pi")
@@ -34,7 +44,7 @@ with tf.name_scope("model"):
                      sample_shape=N, name= "mixture")
     z = x.cat
 
-T = 100  # number of MCMC samples
+
 with tf.name_scope("posterior"):
     qpi = Empirical(tf.get_variable(
         "qpi/params", [T, K],
@@ -49,11 +59,13 @@ with tf.name_scope("posterior"):
         "qz/params", [T, N],
         initializer=tf.zeros_initializer(),
         dtype=tf.int32))
-print("Running Gibbs Sampling...")
 
+print("Running Gibbs Sampling...")
+Gibbs_inference_startTime = time.time()
+current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 inference = ed.Gibbs({pi: qpi, mu: qmu, sigma: qsigma, z: qz},
-                     data={x: train_img}, )
-print("Inference Done!")
+                     data={x: train_img})
+print("Sampling Done!")
 
 inference.initialize(n_print=50, logdir='log/IMG={}_K={}_T={}'.format(img_no, K, T))
 sess = ed.get_session()
@@ -70,15 +82,20 @@ for _ in range(inference.n_iter):
         print("\nInferred cluster means:")
         posterior_mu = sess.run(running_cluster_means, {t_ph: t - 1})
         print(posterior_mu)
+inference.finalize()
 
-#plt.hist(qz.eval())
+print("Inference Done!")
+Gibbs_inference_elapsedTime = time.time() - Gibbs_inference_startTime
+
+
 # Calculate likelihood for each data point and cluster assignment,
 # averaged over many posterior samples. ``x_post`` has shape (N, 100, K, D).
-mu_sample = qmu.sample(100)
-sigmasq_sample = qsigma.sample(100)
+mu_sample = qmu.sample(M)
+sigmasq_sample = qsigma.sample(M)
+pi_sample = qpi.sample(M)
 x_post = Normal(loc=tf.ones([N, 1, 1, 1]) * mu_sample,
                 scale=tf.ones([N, 1, 1, 1]) * tf.sqrt(sigmasq_sample))
-x_broadcasted = tf.tile(tf.reshape(train_img, [N, 1, 1, D]), [1, 100, K, 1])
+x_broadcasted = tf.tile(tf.reshape(train_img, [N, 1, 1, D]), [1, M, K, 1])
 x_broadcasted = tf.cast(x_broadcasted, dtype= tf.float32)
 
 # Sum over latent dimension, then average over posterior samples.
