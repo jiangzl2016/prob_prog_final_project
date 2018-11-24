@@ -13,9 +13,11 @@ from edward.models import Categorical, Dirichlet, InverseGamma, Normal, Multivar
 TRAIN_DIR = "../data/BSR/BSDS500/data/images/train/"
 
 
-def load_image_matrix(img_no, reshape=True):
-    full_train_path = TRAIN_DIR + '{}.jpg'.format(img_no)
+def load_image_matrix(img_no, train_dir, reshape=True):
+    full_train_path = train_dir + '{}.jpg'.format(img_no)
     img = plt.imread(full_train_path)
+    img_nrow = img.shape[0]
+    img_ncol = img.shape[1]
     if reshape:
         img = img.reshape(-1, img.shape[-1])
     return img.astype(int)
