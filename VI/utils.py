@@ -43,13 +43,13 @@ def log_important_ratio(approx, nsample):
         q_theta.append(np.sum(logq_func.logpdf(dict_to_array(point))))
     p_theta_y = np.asarray(p_theta_y)
     q_theta = np.asarray(q_theta)
-    return p_theta_y - q_theta
+    return p_theta_y, q_theta, p_theta_y - q_theta
 
 
 def PSIS(approx, nsample):
-    ratio = log_important_ratio(approx, nsample)
-    lw, k = pm.stats._psislw(ratio[:, None], 1)
-    return k
+    logp, logq, lw = log_important_ratio(approx, nsample)
+    new_lw, k = pm.stats._psislw(lw[:, None], 1)
+    return new_lw, k
 
 
 def PDI(trace, model):
@@ -74,16 +74,24 @@ def PDI(trace, model):
     return pdi, pdi_log, wapdi
 
 
-def predict_cluster(approx, nsample, X, model, xobs, K):
+def predict_cluster(approx, nsample, X, model, K, cov="full"):
+    xobs = model.x_obs
     complogp = xobs.distribution._comp_logp(theano.shared(X))
     f_complogp = model.model.fastfn(complogp)
     trace = approx.sample(nsample)
 
     point = model.test_point
+
     for i in np.arange(K):
         point['mu%i' % i] = np.mean(trace['mu%i' % i], axis=0)  # take average over samples
-        chollabel = 'chol_cov_%i_cholesky-cov-packed__' % i
-        point[chollabel] = np.mean(trace[chollabel], axis=0)  # take average over samples
+
+        if cov == "full":
+            label = 'chol_cov_%i_cholesky-cov-packed__' % i
+
+        elif cov == "diagonal":
+            label = 'tau%i_log__' % i
+
+        point[label] = np.mean(trace[label], axis=0)
 
     y = np.argmax(f_complogp(point), axis=1)
     return y, point

@@ -9,18 +9,18 @@ from utils import PDI, predict_cluster
 
 
 plt.style.use('ggplot')
-plt.rcParams["axes.grid"] = False
+#plt.rcParams["axes.grid"] = False
 
+
+test_idx = 1
 
 # Number of cluster setting
 K = 20
 
 
-
-
-print("reading image...")
 # Read image
-img_name = "25098"
+img_name = "61060"
+print("reading image" + img_name +"...")
 train_path = "/Users/leah/Columbia/courses/ml_prob_programming/ENV/BSR/BSDS500/data/images/train/"
 img = plt.imread(train_path+ img_name+".jpg")
 
@@ -29,10 +29,11 @@ N, D = X.shape
 
 # Out-path
 
-out_path = "out/" + img_name
+out_path = "out/" + img_name + "_{0:d}".format(test_idx)
+os.mkdir(out_path)
 
-plt.grid(None)
 plt.imshow(img)
+plt.grid(None)
 plt.savefig(out_path+"/"+img_name+".jpg")
 
 
@@ -53,14 +54,13 @@ with pm.Model() as model:
     packed_chol = []
     chol = []
     for i in range(K):
-        temp_mean = np.random.randint(low=50, high=200, size=3)
-        #print(temp_mean)
-        mu.append(pm.Normal('mu%i'%i, temp_mean, 20, shape=3))
+        temp_mean = np.random.randint(low=50, high=200, size=D)
+        mu.append(pm.Normal('mu%i'%i, temp_mean, 20, shape=D))
         packed_chol.append(pm.LKJCholeskyCov('chol_cov_%i'%i,
                                              eta=2,
-                                             n=3,
+                                             n=D,
                                              sd_dist=pm.HalfNormal.dist(10)))
-        chol.append(pm.expand_packed_triangular(3, packed_chol[i], lower=True))
+        chol.append(pm.expand_packed_triangular(D, packed_chol[i], lower=True))
         comp_dist.append(pm.MvNormal.dist(mu=mu[i], chol=chol[i]))
 
     xobs = pm.Mixture('x_obs', pi, comp_dist,
@@ -94,6 +94,7 @@ for i in range(nrows):
 
 fig = plt.figure()
 plt.imshow(segmented_img)
+plt.grid(None)
 plt.title("Segmented image using {0:d} clusters".format(K))
 plt.savefig(out_path+"/"+"seg_img.jpg")
 
@@ -104,8 +105,15 @@ axs[0].grid(None)
 axs[0].set_title("original image")
 axs[1].imshow(segmented_img)
 axs[1].grid(None)
-axs[1].set_title("Segmented image using {0:d} clusters".format(K))
+axs[1].set_title("segmented image, {0:d} clusters".format(K))
 plt.savefig(out_path+"/"+"comparison.jpg", pdi=400)
+
+fig = plt.figure()
+plt.hist(y, bins=K)
+plt.title("histogram of cluster assignments")
+plt.xlabel("cluster index")
+plt.ylabel("number of pixels")
+plt.savefig(out_path+"/"+"cluster_histogram.jpg")
 
 
 print("doing diagnosis...")
