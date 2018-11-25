@@ -171,3 +171,4 @@ def get_segment_img(y, point, img):
             segmented_img[i, j] = \
                 point['mu{0:d}'.format(cluster_number)].astype(int)
     return segmented_img
+
