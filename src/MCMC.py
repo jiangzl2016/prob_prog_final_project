@@ -10,19 +10,19 @@ import time
 from datetime import datetime
 from edward.models import Dirichlet, InverseGamma, Normal, \
     MultivariateNormalDiag, Empirical, ParamMixture
-from Utils import load_image_matrix, visualize_clustered_plot, \
+from utils import load_image_matrix, visualize_clustered_plot, \
     plot_and_save_image, log_likelihood_result
 
-img_no = 2092
+img_no = 61060
 TRAIN_DIR = "../data/BSR/BSDS500/data/images/train/"
 img, train_img = load_image_matrix(img_no, TRAIN_DIR)
 
 # Hyperparameters
 N = train_img.shape[0]
-K = 9
+K = 15
 D = train_img.shape[1]
-T = 300  # number of MCMC samples
-M = 100  # number of posterior samples sampled
+T = 800  # number of MCMC samples
+M = 300  # number of posterior samples sampled
 
 ed.set_seed(1234)
 
