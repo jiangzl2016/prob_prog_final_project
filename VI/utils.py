@@ -9,6 +9,8 @@ from pymc3.distributions.dist_math import rho2sd
 from scipy.special import logsumexp as sp_logsumexp
 import scipy.stats as st
 
+import matplotlib.pyplot as plt
+
 import numpy as np
 
 
@@ -88,13 +90,29 @@ def predict_cluster(approx, nsample, X, model, K, cov="full"):
         if cov == "full":
             label = 'chol_cov_%i_cholesky-cov-packed__' % i
 
-        elif cov == "diagonal":
+        elif cov == "precision_diagonal":
             label = 'tau%i_log__' % i
+
+        elif cov == "cov_diagonal":
+            label = 'sigma_sq%i_log__' % i
 
         point[label] = np.mean(trace[label], axis=0)
 
     y = np.argmax(f_complogp(point), axis=1)
     return y, point
+
+
+def get_segment_img(y, point, img):
+    nrows, ncols = img.shape[0], img.shape[1]
+    D = img.shape[2]
+    segmented_img = np.zeros((nrows, ncols, D), dtype='int')
+    cluster_reshape = y.reshape(nrows, ncols)
+    for i in range(nrows):
+        for j in range(ncols):
+            cluster_number = cluster_reshape[i, j]
+            segmented_img[i, j] = point['mu{0:d}'.format(cluster_number)].astype(int)
+    return segmented_img
+
 
 
 def test_import_fun():

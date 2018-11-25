@@ -30,7 +30,6 @@ X = img.reshape(-1, 3).astype(int)
 N, D = X.shape
 
 # Out-path
-
 out_path = "out_gammaprior/" + img_name + "_{0:d}".format(test_idx)
 os.mkdir(out_path)
 
@@ -81,7 +80,7 @@ plt.savefig(out_path+"/lossPlot.jpg")
 
 print("making prediction...")
 # Prediction
-y, point = predict_cluster(approx=advi_mf.approx, nsample=1000, X=X, model=model, K=K, cov="diagonal")
+y, point = predict_cluster(approx=advi_mf.approx, nsample=1000, X=X, model=model, K=K, cov="precision_diagonal")
 nrows, ncols = img.shape[0], img.shape[1]
 segmented_img = np.zeros((nrows, ncols, D),dtype='int')
 cluster_reshape = y.reshape(nrows, ncols)

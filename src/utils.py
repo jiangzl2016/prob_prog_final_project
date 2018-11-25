@@ -154,7 +154,7 @@ def predict_cluster(approx, nsample, X, model, K, cov="full"):
     return y, point
 
 
-def get_segment_img(y, point, img):
+def get_segment_img(y, img, point, mcmc=False):
     nrows, ncols = img.shape[0], img.shape[1]
     D = img.shape[2]
     segmented_img = np.zeros((nrows, ncols, D), dtype='int')
@@ -162,5 +162,9 @@ def get_segment_img(y, point, img):
     for i in range(nrows):
         for j in range(ncols):
             cluster_number = cluster_reshape[i, j]
-            segmented_img[i, j] = point['mu{0:d}'.format(cluster_number)].astype(int)
+            if mcmc:
+                # point = posterior_mu
+                segmented_img[i, j] = point[cluster_number].astype(int)
+            else:
+                segmented_img[i, j] = point['mu{0:d}'.format(cluster_number)].astype(int)
     return segmented_img
