@@ -1,31 +1,25 @@
 """
 The script stores utility functions.
 """
-import tensorflow as tf
-#import imageio
 import numpy as np
-import edward as ed
-#import pystan
+import seaborn as sns
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-from edward.models import Categorical, Dirichlet, InverseGamma, Normal, MultivariateNormalDiag, Mixture, Empirical, ParamMixture
+import os
 
 TRAIN_DIR = "../data/BSR/BSDS500/data/images/train/"
 
 
-def load_image_matrix(img_no, train_dir, reshape=True):
+def load_image_matrix(img_no, train_dir):
     full_train_path = train_dir + '{}.jpg'.format(img_no)
     img = plt.imread(full_train_path)
-    img_nrow = img.shape[0]
-    img_ncol = img.shape[1]
-    if reshape:
-        img = img.reshape(-1, img.shape[-1])
-    return img.astype(int)
+    reshape_img = img.reshape(-1, img.shape[-1])
+    return img, reshape_img.astype(int)
 
 
-def visualize_clustered_plot(img, clusters, posterior_mu, img_no, D, K, T):
+def visualize_clustered_plot(img, clusters, posterior_mu, img_no, current_time,
+                             d, k, t, save_img=False):
     nrows, ncols = img.shape[0], img.shape[1]
-    segmented_img = np.zeros((nrows, ncols, D), dtype='int')
+    segmented_img = np.zeros((nrows, ncols, d), dtype='int')
     cluster_reshape = clusters.reshape(nrows, ncols)
     for i in range(nrows):
         for j in range(ncols):
@@ -33,13 +27,33 @@ def visualize_clustered_plot(img, clusters, posterior_mu, img_no, D, K, T):
             segmented_img[i, j] = posterior_mu[cluster_number].astype(int)
     fig = plt.figure()
     plt.imshow(segmented_img)
-    plt.savefig('../tmp/img={}_K={}_T={}.png'.format(img_no, K, T))
+    if save_img:
+        plt.savefig('../tmp/img_result/{}/fitted_img={}_K={}_T={}_Time={}.png'.format(
+            current_time, img_no, k, t, current_time))
+    fig = plt.figure()
+    plt.imshow(img)
+    if save_img:
+        plt.savefig('../tmp/img_result/{}/original_img={}_K={}_T={}_Time={}.png'.format(
+            current_time, img_no, k, t, current_time))
 
 
-def calculate_pdi():
-    pass
+def plot_and_save_image(img, metric_array, title, save_dir):
+    fig = plt.figure()
+    nrows, ncols = img.shape[0], img.shape[1]
+    metric_matrix = np.reshape(metric_array, (nrows, ncols))
+    ax = sns.heatmap(metric_matrix)
+    ax.set_title(title)
+    plt.imshow(metric_matrix)
+    plt.savefig(save_dir)
 
 
-def plot_pdi_heatmap():
-    pass
-
+def log_likelihood_result(log_dir, img_no, k, t, total_total_log_liks_value,
+                          current_time, elapsed_time, expected_log_liks_value):
+    with open(log_dir + 'log_likelihood.txt', 'a') as fp:
+        if os.stat(log_dir + 'log_likelihood.txt').st_size == 0:
+            fp.write("img,K,T,log_lik,datetime,runtime\n")
+        fp.write("{},{},{},{},{},{}\n".format(
+            img_no, k, t, total_total_log_liks_value, current_time,
+            elapsed_time))
+    print('The data log likeilhood is: {}'.format(total_total_log_liks_value))
+    print('The data expected log likelihood is: {}'.format(expected_log_liks_value))
