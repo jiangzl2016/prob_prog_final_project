@@ -8,9 +8,8 @@ import os
 import matplotlib.pyplot as plt
 import time
 from datetime import datetime
-import seaborn as sns
-from edward.models import Categorical, Dirichlet, InverseGamma, Normal, \
-    MultivariateNormalDiag, Mixture, Empirical, ParamMixture
+from edward.models import Dirichlet, InverseGamma, Normal, \
+    MultivariateNormalDiag, Empirical, ParamMixture
 from Utils import load_image_matrix, visualize_clustered_plot, \
     plot_and_save_image, log_likelihood_result
 
@@ -33,10 +32,10 @@ with tf.name_scope("model"):
     mu = Normal(loc=tf.zeros(D, name="centroids/loc"),
                 scale=tf.ones(D, name="centroids/scale"),
                 sample_shape=K, name="centroids")
-    sigma = InverseGamma(concentration=tf.ones(D,
-                                               name="variability/concentration"),
-                         rate=tf.ones(D, name="variability/rate"),
-                         sample_shape=K, name="variability")
+    sigma = InverseGamma(
+        concentration=tf.ones(D, name="variability/concentration"),
+        rate=tf.ones(D, name="variability/rate"),
+        sample_shape=K, name="variability")
 
     x = ParamMixture(pi, {'loc': mu, 'scale_diag': tf.sqrt(sigma)},
                      MultivariateNormalDiag,
@@ -98,7 +97,8 @@ x_broadcasted = tf.tile(tf.reshape(train_img, [N, 1, 1, D]), [1, M, K, 1])
 x_broadcasted = tf.cast(x_broadcasted, dtype=tf.float32)
 # Sum over latent dimension, then average over posterior samples.
 # ``log_liks`` ends up with shape (N, K).
-log_liks = tf.reduce_mean(tf.reduce_sum(x_post.log_prob(x_broadcasted), 3), 1)
+log_liks = tf.reduce_mean(tf.reduce_sum(
+    x_post.log_prob(x_broadcasted), 3), 1)
 
 print("Calculating Cluster Assignment...")
 clusters = tf.argmax(log_liks, 1).eval()
@@ -106,8 +106,9 @@ clusters = tf.argmax(log_liks, 1).eval()
 result_img_dirs = '../tmp/img_result/{}'.format(current_time)
 os.makedirs(result_img_dirs)
 plt.hist(clusters)
-plt.savefig('../tmp/img_result/{}/cluster_dist_img={}_K={}_T={}_Time={}.png'.format(
-    current_time, img_no, K, T, current_time))
+plt.savefig(
+    '../tmp/img_result/{}/cluster_dist_img={}_K={}_T={}_Time={}.png'.format(
+        current_time, img_no, K, T, current_time))
 result_cluster_assign_dirs = '../tmp/log/cluster_assign_matrix'
 if not os.path.isdir(result_cluster_assign_dirs):
     os.makedirs(result_cluster_assign_dirs)
@@ -129,17 +130,19 @@ pi_samples_tiled_3 = tf.tile(tf.expand_dims(tf.log(pi_sample), 0), [N, 1, 1])
 sum_log_pi_normal_3 = tf.add(pi_samples_tiled_3, log_liks_3)
 x_max_3 = tf.reduce_max(sum_log_pi_normal_3, axis=2)
 edited_log_sum_3 = tf.add(x_max_3,
-                          tf.log(tf.reduce_sum(tf.exp(sum_log_pi_normal_3 -
-                                                      tf.expand_dims(x_max_3, 2)),
-                                               axis=2)))
+                          tf.log(tf.reduce_sum(
+                              tf.exp(sum_log_pi_normal_3 -
+                                     tf.expand_dims(x_max_3, 2)), axis=2)))
 averaged_total_log_liks_over_pi_samples_3 = tf.reduce_mean(tf.reduce_sum(
     edited_log_sum_3, 0), 0)
 averaged_expected_log_liks_over_pi_samples_3 = tf.reduce_mean(
     tf.reduce_mean(edited_log_sum_3, 0), 0)
 averaged_log_liks_pointwise = tf.reduce_mean(edited_log_sum_3, 1)
 
-total_total_log_liks_value = sess.run(averaged_total_log_liks_over_pi_samples_3)
-expected_log_liks_value = sess.run(averaged_expected_log_liks_over_pi_samples_3)
+total_total_log_liks_value = sess.run(
+    averaged_total_log_liks_over_pi_samples_3)
+expected_log_liks_value = sess.run(
+    averaged_expected_log_liks_over_pi_samples_3)
 pointwise_log_liks_value = sess.run(averaged_log_liks_pointwise)
 
 # Record the log likelihood_result
@@ -167,7 +170,8 @@ WAPDI_DIR = '../tmp/img_result/{}/wapdi_img={}_K={}_T={}_Time={}.png'.format(
     current_time, img_no, K, T, current_time)
 plot_and_save_image(img, wapdi_values, "wapdi", WAPDI_DIR)
 
-POINT_LIKS_DIR = '../tmp/img_result/{}/logliks_img={}_K={}_T={}_Time={}.png'.format(
-    current_time, img_no, K, T, current_time)
+POINT_LIKS_DIR = \
+    '../tmp/img_result/{}/logliks_img={}_K={}_T={}_Time={}.png'.format(
+        current_time, img_no, K, T, current_time)
 plot_and_save_image(img, pointwise_log_liks_value,
                     "pointwise log likeihood", POINT_LIKS_DIR)
