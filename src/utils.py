@@ -181,3 +181,41 @@ def test_import():
     print("successfully imported!")
 
 
+def plot_pdi_wapdi(pdi, log_pdi, pdi_log, wapdi,
+                   nrows, ncols, k=1, plot_type="dist"):
+    if plot_type == "pixel-dist":
+        fig, axs = plt.subplots(1, 4, figsize=(10, 4))
+        axs[0].plot(pdi)
+        axs[0].set_title("pdi")
+        axs[1].plot(log_pdi)
+        axs[1].set_title("log-pdi")
+        axs[2].plot(pdi_log)
+        axs[2].set_title("pdi-log")
+        axs[3].plot(wapdi)
+        axs[3].set_title("wapdi")
+        plt.tight_layout()
+    elif plot_type == "dist":
+        fig, axs = plt.subplots(1, 4, figsize=(10, 2))
+        sns.distplot(pdi[np.isfinite(pdi)], ax=axs[0])
+        axs[0].set_title("pdi")
+        sns.distplot(log_pdi[np.isfinite(log_pdi)], ax=axs[1])
+        axs[1].set_title("log_pdi")
+        sns.distplot(pdi_log, ax=axs[2])
+        axs[2].set_title("pdi_log")
+        sns.distplot(wapdi, ax=axs[3])
+        axs[3].set_title("wapdi")
+        plt.tight_layout()
+    elif plot_type == "heatmap":
+        pdi_reshape = pdi.reshape(nrows, ncols)
+        log_pdi_reshape = log_pdi.reshape(nrows, ncols)
+        pdi_log_reshape = pdi_log.reshape(nrows, ncols)
+        wapdi_reshape = wapdi.reshape(nrows, ncols)
+        fig, axs = plt.subplots(2, 2, figsize=(10, 6))
+        sns.heatmap(pdi_reshape, cbar_kws={"shrink": k}, ax=axs[0][0])
+        axs[0][0].set_title("pdi")
+        sns.heatmap(log_pdi_reshape, cbar_kws={"shrink": k}, ax=axs[0][1])
+        axs[0][1].set_title("log-pdi")
+        sns.heatmap(pdi_log_reshape, cbar_kws={"shrink": k}, ax=axs[1][0])
+        axs[1][0].set_title("pdi-log")
+        sns.heatmap(wapdi_reshape, cbar_kws={"shrink": k}, ax=axs[1][1])
+        axs[1][1].set_title("pdi")
