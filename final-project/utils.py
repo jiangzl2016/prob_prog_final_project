@@ -5,14 +5,12 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
-
 import theano
 import pymc3 as pm
 from pymc3.stats import _log_post_trace
 from pymc3.distributions.dist_math import rho2sd
 from scipy.special import logsumexp as sp_logsumexp
 import scipy.stats as st
-
 
 TRAIN_DIR = "../data/BSR/BSDS500/data/images/train/"
 
@@ -33,20 +31,22 @@ def visualize_clustered_plot(img, clusters, posterior_mu, img_no, current_time,
         for j in range(ncols):
             cluster_number = cluster_reshape[i, j]
             segmented_img[i, j] = posterior_mu[cluster_number].astype(int)
-    fig = plt.figure()
+    plt.figure()
     plt.imshow(segmented_img)
     if save_img:
-        plt.savefig('../tmp/img_result/{}/fitted_img={}_K={}_T={}_Time={}.png'.format(
+        plt.savefig('../tmp/img_result/{}/\
+        fitted_img={}_K={}_T={}_Time={}.png'.format(
             current_time, img_no, k, t, current_time))
-    fig = plt.figure()
+    plt.figure()
     plt.imshow(img)
     if save_img:
-        plt.savefig('../tmp/img_result/{}/original_img={}_K={}_T={}_Time={}.png'.format(
+        plt.savefig('../tmp/img_result/{}/\
+        original_img={}_K={}_T={}_Time={}.png'.format(
             current_time, img_no, k, t, current_time))
 
 
 def plot_and_save_image(img, metric_array, title, save_dir):
-    fig = plt.figure()
+    plt.figure()
     nrows, ncols = img.shape[0], img.shape[1]
     metric_matrix = np.reshape(metric_array, (nrows, ncols))
     ax = sns.heatmap(metric_matrix)
@@ -55,8 +55,10 @@ def plot_and_save_image(img, metric_array, title, save_dir):
     plt.savefig(save_dir)
 
 
-def log_likelihood_result(log_dir, img_no, k, t, total_total_log_liks_value,
-                          current_time, elapsed_time, expected_log_liks_value):
+def log_likelihood_result(log_dir, img_no, k, t,
+                          total_total_log_liks_value,
+                          current_time, elapsed_time,
+                          expected_log_liks_value):
     with open(log_dir + 'log_likelihood.txt', 'a') as fp:
         if os.stat(log_dir + 'log_likelihood.txt').st_size == 0:
             fp.write("img,K,T,log_lik,datetime,runtime\n")
@@ -64,7 +66,8 @@ def log_likelihood_result(log_dir, img_no, k, t, total_total_log_liks_value,
             img_no, k, t, total_total_log_liks_value, current_time,
             elapsed_time))
     print('The data log likeilhood is: {}'.format(total_total_log_liks_value))
-    print('The data expected log likelihood is: {}'.format(expected_log_liks_value))
+    print('The data expected log likelihood\
+     is: {}'.format(expected_log_liks_value))
 
 
 def log_important_ratio(approx, nsample):
@@ -80,7 +83,8 @@ def log_important_ratio(approx, nsample):
         packed_chol_q = approx_group.params[0]
         mu_q = approx_group.params[1].eval()
         dim = mu_q.shape[0]
-        chol_q = pm.expand_packed_triangular(dim, packed_chol_q, lower=True).eval()
+        chol_q = pm.expand_packed_triangular(
+            dim, packed_chol_q, lower=True).eval()
         cov_q = np.dot(chol_q, chol_q.T)
         logq_func = st.multivariate_normal(mu_q, cov_q)
 
@@ -109,7 +113,8 @@ def PSIS(approx, nsample):
 def PDI(trace, model):
     log_px = _log_post_trace(trace, model)  # shape (nsamples, N_datapoints)
 
-    # log posterior predictive density of data point n = E_{q(\theta)} p(x_n|\theta)
+    # log posterior predictive density of data point n
+    #  = E_{q(\theta)} p(x_n|\theta)
     lppd_n = sp_logsumexp(log_px, axis=0, b=1.0 / log_px.shape[0])
 
     mu_n = np.exp(lppd_n)
@@ -137,7 +142,8 @@ def predict_cluster(approx, nsample, X, model, K, cov="full"):
     point = model.test_point
 
     for i in np.arange(K):
-        point['mu%i' % i] = np.mean(trace['mu%i' % i], axis=0)  # take average over samples
+        # take average over samples
+        point['mu%i' % i] = np.mean(trace['mu%i' % i], axis=0)
 
         if cov == "full":
             label = 'chol_cov_%i_cholesky-cov-packed__' % i
@@ -166,5 +172,10 @@ def get_segment_img(y, img, point, mcmc=False):
                 # point = posterior_mu
                 segmented_img[i, j] = point[cluster_number].astype(int)
             else:
-                segmented_img[i, j] = point['mu{0:d}'.format(cluster_number)].astype(int)
+                segmented_img[i, j] = \
+                    point['mu{0:d}'.format(cluster_number)].astype(int)
     return segmented_img
+
+
+def test_import():
+    print("successfully imported!")
