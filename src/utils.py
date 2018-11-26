@@ -11,6 +11,7 @@ from pymc3.stats import _log_post_trace
 from pymc3.distributions.dist_math import rho2sd
 from scipy.special import logsumexp as sp_logsumexp
 import scipy.stats as st
+from sklearn import metrics
 
 TRAIN_DIR = "../data/BSR/BSDS500/data/images/train/"
 
@@ -177,10 +178,6 @@ def get_segment_img(y, img, point, mcmc=False):
     return segmented_img
 
 
-def test_import():
-    print("successfully imported!")
-
-
 def plot_pdi_wapdi(pdi, log_pdi, pdi_log, wapdi,
                    nrows, ncols, k=1, plot_type="dist"):
     if plot_type == "pixel-dist":
@@ -219,3 +216,17 @@ def plot_pdi_wapdi(pdi, log_pdi, pdi_log, wapdi,
         axs[1][0].set_title("pdi-log")
         sns.heatmap(wapdi_reshape, cbar_kws={"shrink": k}, ax=axs[1][1])
         axs[1][1].set_title("pdi")
+
+
+def cluster_metric(labels_true, labels):
+    print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels_true, labels))
+    print("Completeness: %0.3f" % metrics.completeness_score(labels_true, labels))
+    print("V-measure: %0.3f" % metrics.v_measure_score(labels_true, labels))
+    print("Adjusted Rand Index: %0.3f"
+          % metrics.adjusted_rand_score(labels_true, labels))
+    print("Adjusted Mutual Information: %0.3f"
+          % metrics.adjusted_mutual_info_score(labels_true, labels))
+
+
+def test_import():
+    print("successfully imported!")
