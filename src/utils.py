@@ -11,6 +11,7 @@ from pymc3.stats import _log_post_trace
 from pymc3.distributions.dist_math import rho2sd
 from scipy.special import logsumexp as sp_logsumexp
 import scipy.stats as st
+from sklearn import metrics
 
 TRAIN_DIR = "../data/BSR/BSDS500/data/images/train/"
 
@@ -177,12 +178,9 @@ def get_segment_img(y, img, point, mcmc=False):
     return segmented_img
 
 
-def test_import():
-    print("successfully imported!")
-
-
 def plot_pdi_wapdi(pdi, log_pdi, pdi_log, wapdi,
-                   nrows, ncols, k=1, plot_type="dist"):
+                   img=None, seg_img=None, name=None, k=1, plot_type="dist"):
+    plt.rcParams["axes.grid"] = False
     if plot_type == "pixel-dist":
         fig, axs = plt.subplots(1, 4, figsize=(10, 4))
         axs[0].plot(pdi)
@@ -206,16 +204,60 @@ def plot_pdi_wapdi(pdi, log_pdi, pdi_log, wapdi,
         axs[3].set_title("wapdi")
         plt.tight_layout()
     elif plot_type == "heatmap":
+        nrows = img.shape[0]
+        ncols = img.shape[1]
         pdi_reshape = pdi.reshape(nrows, ncols)
         log_pdi_reshape = log_pdi.reshape(nrows, ncols)
         pdi_log_reshape = pdi_log.reshape(nrows, ncols)
         wapdi_reshape = wapdi.reshape(nrows, ncols)
-        fig, axs = plt.subplots(2, 2, figsize=(10, 6))
+        fig, axs = plt.subplots(2, 3, figsize=(12, 8))
         sns.heatmap(pdi_reshape, cbar_kws={"shrink": k}, ax=axs[0][0])
+        axs[0][0].imshow(pdi_reshape)
         axs[0][0].set_title("pdi")
+
         sns.heatmap(log_pdi_reshape, cbar_kws={"shrink": k}, ax=axs[0][1])
+        axs[0][1].imshow(log_pdi_reshape)
         axs[0][1].set_title("log-pdi")
+
+        axs[0][2].imshow(img)
+        axs[0][2].set_title("original image")
+
         sns.heatmap(pdi_log_reshape, cbar_kws={"shrink": k}, ax=axs[1][0])
+        axs[1][0].imshow(pdi_log_reshape)
         axs[1][0].set_title("pdi-log")
+
         sns.heatmap(wapdi_reshape, cbar_kws={"shrink": k}, ax=axs[1][1])
-        axs[1][1].set_title("pdi")
+        axs[1][1].imshow(wapdi_reshape)
+        axs[1][1].set_title("wapdi")
+
+        axs[1][2].imshow(seg_img)
+        axs[1][2].set_title("segmented image (" + name + ")")
+        plt.tight_layout()
+
+
+def cluster_metric(labels_true, labels):
+    print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels_true, labels))
+    print("Completeness: %0.3f" % metrics.completeness_score(labels_true, labels))
+    print("V-measure: %0.3f" % metrics.v_measure_score(labels_true, labels))
+    print("Adjusted Rand Index: %0.3f"
+          % metrics.adjusted_rand_score(labels_true, labels))
+    print("Adjusted Mutual Information: %0.3f"
+          % metrics.adjusted_mutual_info_score(labels_true, labels))
+
+
+def plot_seg_vs_truth(img, truth, seg1, seg2):
+    plt.rcParams["axes.grid"] = False
+    fig, axs = plt.subplots(1,4, figsize=(15,15))
+    axs[0].imshow(img)
+    axs[0].set_title("original image")
+    axs[1].imshow(truth)
+    axs[1].set_title("human-segmented")
+    axs[2].imshow(seg1)
+    axs[2].set_title("MCMC-segmented")
+    axs[3].imshow(seg2)
+    axs[3].set_title("ADVI-segmented")
+    plt.tight_layout()
+
+
+def test_import():
+    print("successfully imported!")
