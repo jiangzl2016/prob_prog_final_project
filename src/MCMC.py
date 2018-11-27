@@ -24,7 +24,7 @@ D = train_img.shape[1]
 T = 800  # number of MCMC samples
 M = 300  # number of posterior samples sampled
 
-ed.set_seed(1234)
+ed.set_seed(67)
 
 with tf.name_scope("model"):
     pi = Dirichlet(concentration=tf.constant([1.0] * K, name="pi/weights"),
