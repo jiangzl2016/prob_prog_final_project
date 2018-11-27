@@ -2,10 +2,9 @@ import theano
 import pymc3 as pm
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 import os
 import theano.tensor as tt
-from utils import PDI, predict_cluster
+from utils import PDI, predict_cluster, plot_pdi_wapdi
 
 plt.style.use('ggplot')
 # plt.rcParams["axes.grid"] = False
@@ -14,10 +13,10 @@ plt.style.use('ggplot')
 test_idx = 1
 
 # Number of cluster setting
-K = 10
+K = 20
 
 # Read image
-img_no = 2092
+img_no = 299091
 print("reading image {0:d} ...".format(img_no))
 
 train_path = "../BSR/BSDS500/data/images/train/"
@@ -27,7 +26,7 @@ X = img.reshape(-1, 3).astype(int)
 N, D = X.shape
 
 # Out-path
-out_path = "out_invgammaprior/" + \
+out_path = "../out/ADVI_invgamma/" + \
            "{0:d}_{1:d}".format(img_no, test_idx)
 os.mkdir(out_path)
 
@@ -50,7 +49,7 @@ with pm.Model() as model:
     sigma_sq = []
     cov = []
     for i in range(K):
-        temp_mean = np.random.randint(low=50, high=200, size=D)
+        temp_mean = np.random.randint(low=20, high=230, size=D)
         mu.append(pm.Normal('mu%i' % i, temp_mean, 20, shape=D))
         sigma_sq.append(
             pm.InverseGamma('sigma_sq%i' % i, 1, 1, shape=D))
@@ -120,41 +119,13 @@ pm.traceplot(post_samples)
 plt.savefig(out_path + "/post_distribution.jpg")
 
 print("ploting PDIs")
-# plot PDI
-pdi_reshape = pdi.reshape(nrows, ncols)
-pdi_log_reshape = pdi_log.reshape(nrows, ncols)
-wapdi_reshape = wapdi.reshape(nrows, ncols)
+# plot PDI heatmap
+log_pdi = np.log(pdi)
+plot_pdi_wapdi(pdi, log_pdi, pdi_log, wapdi,
+               k=0.5, plot_type="dist")
+plt.savefig(out_path + "/pdi_dist.jpg")
 
-fig = plt.figure()
-fig.subplots_adjust(hspace=0.5, wspace=0.5)
-
-plt.subplot(1, 2, 1)
-sns.set()
-ax = sns.heatmap(pdi_reshape, cbar_kws={"shrink": 0.4})
-ax.set_title("pdi")
-plt.imshow(pdi_reshape)
-
-plt.subplot(1, 2, 2)
-sns.set()
-ax = sns.heatmap(np.log(pdi_reshape), cbar_kws={"shrink": 0.4})
-ax.set_title("log(pdi)")
-plt.imshow(np.log(pdi_reshape))
-
-plt.savefig(out_path + "/PDI_plot1.jpg", dpi=400)
-
-fig = plt.figure()
-fig.subplots_adjust(hspace=0.5, wspace=0.5)
-
-plt.subplot(1, 2, 1)
-sns.set()
-ax = sns.heatmap(pdi_log_reshape, cbar_kws={"shrink": 0.4})
-ax.set_title("pdi_log")
-plt.imshow(pdi_log_reshape)
-
-plt.subplot(1, 2, 2)
-sns.set()
-ax = sns.heatmap(wapdi_reshape, cbar_kws={"shrink": 0.4})
-ax.set_title("wapdi")
-plt.imshow(wapdi_reshape)
-
-plt.savefig(out_path + "/PDI_plot2.jpg", dpi=400)
+plot_pdi_wapdi(pdi, log_pdi, pdi_log, wapdi,
+               img=img, seg_img=segmented_img,
+               name="ADVI", k=0.5, plot_type="heatmap")
+plt.savefig(out_path + "/pdi_heat.jpg")

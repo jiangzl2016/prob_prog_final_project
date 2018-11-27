@@ -179,7 +179,8 @@ def get_segment_img(y, img, point, mcmc=False):
 
 
 def plot_pdi_wapdi(pdi, log_pdi, pdi_log, wapdi,
-                   img=None, seg_img=None, name=None, k=1, plot_type="dist"):
+                   img=None, seg_img=None, name=None,
+                   k=1, plot_type="dist"):
     plt.rcParams["axes.grid"] = False
     if plot_type == "pixel-dist":
         fig, axs = plt.subplots(1, 4, figsize=(10, 4))
@@ -236,8 +237,10 @@ def plot_pdi_wapdi(pdi, log_pdi, pdi_log, wapdi,
 
 
 def cluster_metric(labels_true, labels):
-    print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels_true, labels))
-    print("Completeness: %0.3f" % metrics.completeness_score(labels_true, labels))
+    print("Homogeneity: %0.3f" %
+          metrics.homogeneity_score(labels_true, labels))
+    print("Completeness: %0.3f" %
+          metrics.completeness_score(labels_true, labels))
     print("V-measure: %0.3f" % metrics.v_measure_score(labels_true, labels))
     print("Adjusted Rand Index: %0.3f"
           % metrics.adjusted_rand_score(labels_true, labels))
@@ -247,7 +250,7 @@ def cluster_metric(labels_true, labels):
 
 def plot_seg_vs_truth(img, truth, seg1, seg2):
     plt.rcParams["axes.grid"] = False
-    fig, axs = plt.subplots(1,4, figsize=(15,15))
+    fig, axs = plt.subplots(1, 4, figsize=(15, 15))
     axs[0].imshow(img)
     axs[0].set_title("original image")
     axs[1].imshow(truth)
